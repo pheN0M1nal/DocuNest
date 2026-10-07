@@ -5,7 +5,7 @@ Next.js (App Router), TypeScript, Tailwind CSS and Tiptap.
 
 ## Status
 
-Boilerplate. Working end to end today: mocked login, create/rename/edit/save
+Working end to end: mocked login, create/rename/edit/autosave
 documents with rich text, `.txt`/`.md` import, owner-based sharing with
 editor/viewer access, owned vs. shared lists. Data is stored in SQLite via
 libSQL (see "Database").
@@ -70,9 +70,21 @@ src/lib/validation.ts zod schemas
 src/lib/import.ts     upload parsing
 ```
 
-## Next steps
+## Tests
 
-- [ ] Deploy and add the live URL to SUBMISSION.md
-- [ ] Consider `.docx` import
-- [ ] Autosave; component/e2e test for the sharing flow
-- [ ] Fill in ARCHITECTURE.md and AI_WORKFLOW.md with real notes
+`npm test` runs 47 tests: access rules, both stores (in-memory and libSQL run
+the same cases), file import, and the save, import, share and unshare actions.
+
+## Deploying (Vercel)
+
+1. Create a Turso database and token (see "Database").
+2. Import the GitHub repo in Vercel.
+3. Add `TURSO_DATABASE_URL` and `TURSO_AUTH_TOKEN` under Settings, Environment
+   Variables. The build fails with a clear message if they are missing.
+4. Deploy. Tables are created on first use; the seeded users need no setup.
+
+## Notes
+
+- `ARCHITECTURE.md` explains what was prioritized and why.
+- `AI_WORKFLOW.md` covers how AI tools were used.
+- `SUBMISSION.md` lists what is included, known gaps, and next steps.

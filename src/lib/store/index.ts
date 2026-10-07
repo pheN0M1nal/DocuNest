@@ -10,6 +10,9 @@ function createStore(): DocumentStore {
   if (url) {
     return createLibsqlStore(createClient({ url, authToken: process.env.TURSO_AUTH_TOKEN }));
   }
+  if (process.env.VERCEL) {
+    throw new Error("Set TURSO_DATABASE_URL and TURSO_AUTH_TOKEN in the Vercel project settings.");
+  }
   mkdirSync("data", { recursive: true });
   return createLibsqlStore(createClient({ url: LOCAL_DATABASE_URL }));
 }
