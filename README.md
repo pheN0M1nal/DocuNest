@@ -38,7 +38,8 @@ use "Switch user" and sign in as Bob — it appears under "Shared with me".
 ## File upload
 
 Supported: `.txt`, `.md` (max 1 MB). Each upload becomes a new editable
-document titled after the file. Markdown is currently imported as plain text.
+document titled after the file. Markdown is rendered (headings, lists, bold,
+italic); raw HTML is escaped and links are reduced to their text.
 
 ## Project layout
 
@@ -55,6 +56,6 @@ src/lib/import.ts     upload parsing
 
 - [ ] Durable storage: implement `DocumentStore` on SQLite/Postgres/Supabase
 - [ ] Deploy and add the live URL to SUBMISSION.md
-- [ ] Render Markdown on import; consider `.docx`
+- [ ] Consider `.docx` import
 - [ ] Autosave; component/e2e test for the sharing flow
 - [ ] Fill in ARCHITECTURE.md and AI_WORKFLOW.md with real notes

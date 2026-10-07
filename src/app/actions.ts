@@ -4,19 +4,17 @@ import { cookies } from "next/headers";
 import { redirect } from "next/navigation";
 import { revalidatePath } from "next/cache";
 import { canEdit, canShare, getRole } from "@/lib/access";
-import {
-  MAX_UPLOAD_BYTES,
-  SUPPORTED_UPLOAD_EXTENSIONS,
-  UnsupportedFileError,
-  textToHtml,
-  titleFromFilename,
-} from "@/lib/import";
+import { importUpload } from "@/lib/import";
 import { requireUser, SESSION_COOKIE } from "@/lib/session";
 import { store } from "@/lib/store";
 import { findUser } from "@/lib/users";
 import { saveDocumentSchema, shareDocumentSchema } from "@/lib/validation";
 
 export type ActionResult = { ok: true } | { ok: false; error: string };
+
+function redirectWithError(message: string): never {
+  redirect("/documents?error=" + encodeURIComponent(message));
+}
 
 export async function login(formData: FormData) {
   const user = findUser(String(formData.get("userId") ?? ""));
@@ -41,29 +39,15 @@ export async function createDocument() {
 export async function importDocument(formData: FormData) {
   const user = await requireUser();
   const file = formData.get("file");
+  if (!(file instanceof File)) redirectWithError("Choose a file to upload");
 
-  if (!(file instanceof File) || file.size === 0) {
-    redirect("/documents?error=" + encodeURIComponent("Choose a file to upload"));
-  }
-  if (file.size > MAX_UPLOAD_BYTES) {
-    redirect("/documents?error=" + encodeURIComponent("File is too large (max 1 MB)"));
-  }
-
-  let html: string;
-  try {
-    html = textToHtml(file.name, await file.text());
-  } catch (err) {
-    const message =
-      err instanceof UnsupportedFileError
-        ? `Unsupported file type. Supported: ${SUPPORTED_UPLOAD_EXTENSIONS.join(", ")}`
-        : "Could not read that file";
-    redirect("/documents?error=" + encodeURIComponent(message));
-  }
+  const result = await importUpload(file);
+  if (!result.ok) redirectWithError(result.error);
 
   const doc = await store.create({
     ownerId: user.id,
-    title: titleFromFilename(file.name),
-    contentHtml: html,
+    title: result.title,
+    contentHtml: result.html,
   });
   redirect(`/documents/${doc.id}`);
 }

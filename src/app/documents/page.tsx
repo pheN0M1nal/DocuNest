@@ -87,7 +87,7 @@ export default async function DocumentsPage({
             Import
           </button>
           <span className="text-neutral-500">
-            Supported: {SUPPORTED_UPLOAD_EXTENSIONS.join(", ")}
+            Supported: {SUPPORTED_UPLOAD_EXTENSIONS.join(", ")} (max 1 MB)
           </span>
         </form>
       </div>

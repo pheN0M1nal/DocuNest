@@ -3,7 +3,11 @@ import { beforeEach, describe, expect, it, vi } from "vitest";
 const session = vi.hoisted(() => ({ userId: "alice" }));
 
 vi.mock("next/headers", () => ({ cookies: vi.fn() }));
-vi.mock("next/navigation", () => ({ redirect: vi.fn() }));
+vi.mock("next/navigation", () => ({
+  redirect: (url: string) => {
+    throw new Error(`REDIRECT ${url}`);
+  },
+}));
 vi.mock("next/cache", () => ({ revalidatePath: vi.fn() }));
 vi.mock("@/lib/session", () => ({
   SESSION_COOKIE: "docunest_user",
@@ -14,7 +18,7 @@ vi.mock("@/lib/store", async () => {
   return { store: createMemoryStore() };
 });
 
-import { saveDocument } from "./actions";
+import { importDocument, saveDocument } from "./actions";
 import { store } from "@/lib/store";
 
 async function createSharedDoc() {
@@ -72,5 +76,54 @@ describe("saveDocument", () => {
     const result = await saveDocument({ id: doc.id, title: " ", contentHtml: "<p></p>" });
 
     expect(result).toEqual({ ok: false, error: "Title is required" });
+  });
+});
+
+async function redirectedTo(action: () => Promise<unknown>): Promise<string> {
+  try {
+    await action();
+  } catch (error) {
+    return (error as Error).message.replace("REDIRECT ", "");
+  }
+  throw new Error("expected a redirect");
+}
+
+function uploadForm(file?: File) {
+  const form = new FormData();
+  if (file) form.set("file", file);
+  return form;
+}
+
+describe("importDocument", () => {
+  beforeEach(() => {
+    session.userId = "dana";
+  });
+
+  it("creates a document owned by the user and opens it", async () => {
+    const file = new File(["# Notes\n\n- one"], "meeting.md");
+
+    const url = await redirectedTo(() => importDocument(uploadForm(file)));
+
+    const [doc] = await store.listForUser("dana");
+    expect(url).toBe(`/documents/${doc.id}`);
+    expect(doc).toMatchObject({ title: "meeting", ownerId: "dana" });
+    expect(doc.contentHtml).toContain("<h1>Notes</h1>");
+  });
+
+  it("redirects with an error for an unsupported file and creates nothing", async () => {
+    session.userId = "erin";
+    const file = new File(["x"], "report.docx");
+
+    const url = await redirectedTo(() => importDocument(uploadForm(file)));
+
+    expect(url).toContain("/documents?error=");
+    expect(decodeURIComponent(url)).toContain("Unsupported file type");
+    expect(await store.listForUser("erin")).toHaveLength(0);
+  });
+
+  it("redirects with an error when no file is chosen", async () => {
+    const url = await redirectedTo(() => importDocument(uploadForm()));
+
+    expect(decodeURIComponent(url)).toContain("Choose a file to upload");
   });
 });
