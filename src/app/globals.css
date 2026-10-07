@@ -1,0 +1,33 @@
+@import "tailwindcss";
+
+:root {
+  --background: #ffffff;
+  --foreground: #171717;
+}
+
+@theme inline {
+  --color-background: var(--background);
+  --color-foreground: var(--foreground);
+  --font-sans: var(--font-geist-sans);
+  --font-mono: var(--font-geist-mono);
+}
+
+@media (prefers-color-scheme: dark) {
+  :root {
+    --background: #0a0a0a;
+    --foreground: #ededed;
+  }
+}
+
+body {
+  background: var(--background);
+  color: var(--foreground);
+  font-family: Arial, Helvetica, sans-serif;
+}
+
+/* Rich-text content: Tailwind's preflight strips default heading/list styles. */
+.prose-editor h1 { font-size: 1.875rem; font-weight: 700; margin: 1rem 0 0.5rem; }
+.prose-editor h2 { font-size: 1.5rem; font-weight: 600; margin: 0.875rem 0 0.5rem; }
+.prose-editor ul { list-style: disc; padding-left: 1.5rem; }
+.prose-editor ol { list-style: decimal; padding-left: 1.5rem; }
+.prose-editor p { margin: 0.5rem 0; }
