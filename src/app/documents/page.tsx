@@ -1,19 +1,26 @@
 import Link from "next/link";
 import { createDocument, importDocument, logout } from "@/app/actions";
+import { getRole, roleLabel } from "@/lib/access";
 import { SUPPORTED_UPLOAD_EXTENSIONS } from "@/lib/import";
 import { requireUser } from "@/lib/session";
 import { store } from "@/lib/store";
 import { findUser } from "@/lib/users";
 import type { DocumentRecord } from "@/lib/types";
 
+function sharedByText(doc: DocumentRecord, viewerId: string): string {
+  const role = getRole(doc, viewerId);
+  const owner = findUser(doc.ownerId)?.name ?? "unknown";
+  return `Shared by ${owner}${role ? ` (${roleLabel(role)})` : ""}`;
+}
+
 function DocumentList({
   docs,
   emptyText,
-  showOwner,
+  viewerId,
 }: {
   docs: DocumentRecord[];
   emptyText: string;
-  showOwner?: boolean;
+  viewerId?: string;
 }) {
   if (docs.length === 0) {
     return <p className="text-sm text-neutral-500">{emptyText}</p>;
@@ -28,7 +35,7 @@ function DocumentList({
           >
             <span className="font-medium">{doc.title}</span>
             <span className="text-sm text-neutral-500">
-              {showOwner ? `Shared by ${findUser(doc.ownerId)?.name ?? "unknown"} · ` : ""}
+              {viewerId ? `${sharedByText(doc, viewerId)} · ` : ""}
               {new Date(doc.updatedAt).toLocaleString()}
             </span>
           </Link>
@@ -103,7 +110,7 @@ export default async function DocumentsPage({
         <h2 className="mb-2 text-sm font-semibold uppercase tracking-wide text-neutral-500">
           Shared with me
         </h2>
-        <DocumentList docs={shared} emptyText="Nothing has been shared with you." showOwner />
+        <DocumentList docs={shared} emptyText="Nothing has been shared with you." viewerId={user.id} />
       </section>
     </main>
   );

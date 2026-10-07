@@ -125,6 +125,24 @@ export function createLibsqlStore(client: Client): DocumentStore {
       );
       return touched.rowsAffected === 0 ? null : store.get(id);
     },
+
+    async unshare(id, userId) {
+      await ready();
+      const [, touched] = await client.batch(
+        [
+          {
+            sql: "DELETE FROM shares WHERE document_id = ? AND user_id = ?",
+            args: [id, userId],
+          },
+          {
+            sql: "UPDATE documents SET updated_at = ? WHERE id = ?",
+            args: [new Date().toISOString(), id],
+          },
+        ],
+        "write",
+      );
+      return touched.rowsAffected === 0 ? null : store.get(id);
+    },
   };
 
   return store;

@@ -8,7 +8,11 @@ import { importUpload } from "@/lib/import";
 import { requireUser, SESSION_COOKIE } from "@/lib/session";
 import { store } from "@/lib/store";
 import { findUser } from "@/lib/users";
-import { saveDocumentSchema, shareDocumentSchema } from "@/lib/validation";
+import {
+  saveDocumentSchema,
+  shareDocumentSchema,
+  unshareDocumentSchema,
+} from "@/lib/validation";
 
 export type ActionResult = { ok: true } | { ok: false; error: string };
 
@@ -76,8 +80,19 @@ export async function saveDocument(input: {
   return { ok: true };
 }
 
-export async function shareDocument(formData: FormData) {
+function sharePath(documentId: string, error?: string): string {
+  const base = `/documents/${documentId}?share=open`;
+  return error ? `${base}&error=${encodeURIComponent(error)}` : base;
+}
+
+async function requireOwnedDocument(documentId: string) {
   const user = await requireUser();
+  const doc = await store.get(documentId);
+  if (!doc || !canShare(getRole(doc, user.id))) redirect("/documents");
+  return doc;
+}
+
+export async function shareDocument(formData: FormData) {
   const parsed = shareDocumentSchema.safeParse({
     id: formData.get("id"),
     userId: formData.get("userId"),
@@ -86,15 +101,23 @@ export async function shareDocument(formData: FormData) {
   if (!parsed.success) redirect("/documents");
 
   const { id, userId, access } = parsed.data;
-  const doc = await store.get(id);
-  if (!doc || !canShare(getRole(doc, user.id))) redirect("/documents");
+  const doc = await requireOwnedDocument(id);
 
   const target = findUser(userId);
-  if (!target || target.id === doc.ownerId) {
-    redirect(`/documents/${id}?error=` + encodeURIComponent("Pick another user"));
-  }
+  if (!target || target.id === doc.ownerId) redirect(sharePath(id, "Pick another user"));
 
   await store.share(id, target.id, access);
-  revalidatePath(`/documents/${id}`);
-  redirect(`/documents/${id}`);
+  redirect(sharePath(id));
+}
+
+export async function unshareDocument(formData: FormData) {
+  const parsed = unshareDocumentSchema.safeParse({
+    id: formData.get("id"),
+    userId: formData.get("userId"),
+  });
+  if (!parsed.success) redirect("/documents");
+
+  await requireOwnedDocument(parsed.data.id);
+  await store.unshare(parsed.data.id, parsed.data.userId);
+  redirect(sharePath(parsed.data.id));
 }

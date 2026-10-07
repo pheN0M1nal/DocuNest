@@ -23,4 +23,6 @@ export interface DocumentStore {
     userId: string,
     access: ShareAccess,
   ): Promise<DocumentRecord | null>;
+  /** Remove a user's access. Returns null if the doc is missing. */
+  unshare(id: string, userId: string): Promise<DocumentRecord | null>;
 }

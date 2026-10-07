@@ -1,5 +1,5 @@
 import { describe, expect, it } from "vitest";
-import { canEdit, canShare, canView, getRole } from "./access";
+import { canEdit, canShare, canView, getRole, roleLabel } from "./access";
 import type { DocumentRecord } from "./types";
 
 const doc: DocumentRecord = {
@@ -29,5 +29,13 @@ describe("document access", () => {
     expect(canEdit(getRole(doc, "editor"))).toBe(true);
     expect(canShare(getRole(doc, "editor"))).toBe(false);
     expect(canShare(getRole(doc, "owner"))).toBe(true);
+  });
+});
+
+describe("roleLabel", () => {
+  it("describes each role in plain words", () => {
+    expect(roleLabel("owner")).toBe("Owner");
+    expect(roleLabel("editor")).toBe("Can edit");
+    expect(roleLabel("viewer")).toBe("Can view");
   });
 });

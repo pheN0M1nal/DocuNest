@@ -21,3 +21,5 @@ export const shareDocumentSchema = z.object({
   userId: z.string().min(1),
   access: z.enum(["editor", "viewer"]),
 });
+
+export const unshareDocumentSchema = shareDocumentSchema.pick({ id: true, userId: true });

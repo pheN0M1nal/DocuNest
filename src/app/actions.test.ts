@@ -18,7 +18,7 @@ vi.mock("@/lib/store", async () => {
   return { store: createMemoryStore() };
 });
 
-import { importDocument, saveDocument } from "./actions";
+import { importDocument, saveDocument, shareDocument, unshareDocument } from "./actions";
 import { store } from "@/lib/store";
 
 async function createSharedDoc() {
@@ -125,5 +125,109 @@ describe("importDocument", () => {
     const url = await redirectedTo(() => importDocument(uploadForm()));
 
     expect(decodeURIComponent(url)).toContain("Choose a file to upload");
+  });
+});
+
+function shareForm(fields: Record<string, string>) {
+  const form = new FormData();
+  for (const [key, value] of Object.entries(fields)) form.set(key, value);
+  return form;
+}
+
+async function createOwnedDoc() {
+  session.userId = "owner";
+  return store.create({ ownerId: "owner", title: "Plan" });
+}
+
+describe("shareDocument", () => {
+  it("lets the owner share and reopens the share dialog", async () => {
+    const doc = await createOwnedDoc();
+
+    const url = await redirectedTo(() =>
+      shareDocument(shareForm({ id: doc.id, userId: "u_bob", access: "editor" })),
+    );
+
+    expect(url).toBe(`/documents/${doc.id}?share=open`);
+    expect((await store.get(doc.id))?.shares).toEqual([{ userId: "u_bob", access: "editor" }]);
+  });
+
+  it("changes an existing user's access without duplicating them", async () => {
+    const doc = await createOwnedDoc();
+    await store.share(doc.id, "u_bob", "viewer");
+
+    await redirectedTo(() => shareDocument(shareForm({ id: doc.id, userId: "u_bob", access: "editor" })));
+
+    expect((await store.get(doc.id))?.shares).toEqual([{ userId: "u_bob", access: "editor" }]);
+  });
+
+  it("does not let an editor share", async () => {
+    const doc = await createOwnedDoc();
+    await store.share(doc.id, "u_bob", "editor");
+    session.userId = "u_bob";
+
+    const url = await redirectedTo(() =>
+      shareDocument(shareForm({ id: doc.id, userId: "u_carol", access: "viewer" })),
+    );
+
+    expect(url).toBe("/documents");
+    expect((await store.get(doc.id))?.shares).toHaveLength(1);
+  });
+
+  it("does not let a stranger share", async () => {
+    const doc = await createOwnedDoc();
+    session.userId = "stranger";
+
+    const url = await redirectedTo(() =>
+      shareDocument(shareForm({ id: doc.id, userId: "u_bob", access: "editor" })),
+    );
+
+    expect(url).toBe("/documents");
+    expect((await store.get(doc.id))?.shares).toHaveLength(0);
+  });
+
+  it("rejects sharing with the owner or an unknown user", async () => {
+    const doc = await createOwnedDoc();
+
+    for (const userId of ["owner", "u_nobody"]) {
+      const url = await redirectedTo(() => shareDocument(shareForm({ id: doc.id, userId, access: "editor" })));
+      expect(decodeURIComponent(url)).toContain("Pick another user");
+    }
+    expect((await store.get(doc.id))?.shares).toHaveLength(0);
+  });
+
+  it("rejects an invalid access level", async () => {
+    const doc = await createOwnedDoc();
+
+    const url = await redirectedTo(() =>
+      shareDocument(shareForm({ id: doc.id, userId: "u_bob", access: "admin" })),
+    );
+
+    expect(url).toBe("/documents");
+    expect((await store.get(doc.id))?.shares).toHaveLength(0);
+  });
+});
+
+describe("unshareDocument", () => {
+  it("lets the owner remove someone's access", async () => {
+    const doc = await createOwnedDoc();
+    await store.share(doc.id, "u_bob", "editor");
+    await store.share(doc.id, "u_carol", "viewer");
+
+    const url = await redirectedTo(() => unshareDocument(shareForm({ id: doc.id, userId: "u_bob" })));
+
+    expect(url).toBe(`/documents/${doc.id}?share=open`);
+    expect((await store.get(doc.id))?.shares).toEqual([{ userId: "u_carol", access: "viewer" }]);
+  });
+
+  it("does not let an editor remove anyone", async () => {
+    const doc = await createOwnedDoc();
+    await store.share(doc.id, "u_bob", "editor");
+    await store.share(doc.id, "u_carol", "viewer");
+    session.userId = "u_bob";
+
+    const url = await redirectedTo(() => unshareDocument(shareForm({ id: doc.id, userId: "u_carol" })));
+
+    expect(url).toBe("/documents");
+    expect((await store.get(doc.id))?.shares).toHaveLength(2);
   });
 });

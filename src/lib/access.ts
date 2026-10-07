@@ -17,3 +17,13 @@ export function canEdit(role: Role | null): boolean {
 export function canShare(role: Role | null): boolean {
   return role === "owner";
 }
+
+const ROLE_LABELS: Record<Role, string> = {
+  owner: "Owner",
+  editor: "Can edit",
+  viewer: "Can view",
+};
+
+export function roleLabel(role: Role): string {
+  return ROLE_LABELS[role];
+}

@@ -40,9 +40,23 @@ describe.each(implementations)("%s store", (_name, createStore) => {
     expect(updated?.shares).toEqual([{ userId: "bob", access: "editor" }]);
   });
 
+  it("removes only the given user's access", async () => {
+    const store = createStore();
+    const doc = await store.create({ ownerId: "alice", title: "Plan" });
+    await store.share(doc.id, "bob", "editor");
+    await store.share(doc.id, "carol", "viewer");
+
+    const updated = await store.unshare(doc.id, "bob");
+
+    expect(updated?.shares).toEqual([{ userId: "carol", access: "viewer" }]);
+    expect(await store.listForUser("bob")).toHaveLength(0);
+    expect(await store.listForUser("carol")).toHaveLength(1);
+  });
+
   it("returns null for a missing document", async () => {
     const store = createStore();
 
+    expect(await store.unshare("missing", "bob")).toBeNull();
     expect(await store.get("missing")).toBeNull();
     expect(await store.update("missing", { title: "x", contentHtml: "<p></p>" })).toBeNull();
     expect(await store.share("missing", "bob", "editor")).toBeNull();

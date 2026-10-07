@@ -51,5 +51,14 @@ export function createMemoryStore(): DocumentStore {
       docs.set(id, next);
       return next;
     },
+
+    async unshare(id, userId) {
+      const doc = docs.get(id);
+      if (!doc) return null;
+      const shares = doc.shares.filter((s) => s.userId !== userId);
+      const next = { ...doc, shares, updatedAt: new Date().toISOString() };
+      docs.set(id, next);
+      return next;
+    },
   };
 }
