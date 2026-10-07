@@ -2,11 +2,7 @@ import { randomUUID } from "node:crypto";
 import type { DocumentRecord } from "../types";
 import type { DocumentStore } from "./types";
 
-/**
- * PLACEHOLDER store: data lives in process memory and is lost on restart.
- * Replace with a durable implementation of DocumentStore before shipping
- * (the assignment requires documents to survive a refresh/redeploy).
- */
+// In-memory store for tests; the app uses the libSQL store.
 export function createMemoryStore(): DocumentStore {
   const docs = new Map<string, DocumentRecord>();
 
